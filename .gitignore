@@ -1,0 +1,11 @@
+.venv
+
+.env
+
+.DS_Store
+
+__pycache__
+
+.langgraph_api/
+
+notes.md
