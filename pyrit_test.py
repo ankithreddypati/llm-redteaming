@@ -35,7 +35,10 @@ from pyrit.prompt_target import HTTPTarget, OpenAIChatTarget, get_http_target_js
 from pyrit.score import SelfAskTrueFalseScorer
 from pyrit.setup import initialize_pyrit_async
 
-load_dotenv(Path(__file__).resolve().parent / ".env")
+ENV_FILE = Path(__file__).resolve().parent / ".env"
+if ENV_FILE.exists():
+    load_dotenv(ENV_FILE)
+
 if os.getenv("OPENAI_API_KEY") and not os.getenv("OPENAI_CHAT_KEY"):
     os.environ["OPENAI_CHAT_KEY"] = os.environ["OPENAI_API_KEY"]
 os.environ.setdefault("OPENAI_CHAT_ENDPOINT", "https://api.openai.com/v1")
@@ -66,7 +69,10 @@ def _http_target() -> HTTPTarget:
 
 
 async def main() -> None:
-    await initialize_pyrit_async("InMemory", env_files=[Path(__file__).resolve().parent / ".env"])
+    init_kwargs = {"memory_db_type": "InMemory"}
+    if ENV_FILE.exists():
+        init_kwargs["env_files"] = [ENV_FILE]
+    await initialize_pyrit_async(**init_kwargs)
 
     target = _http_target()
     judge = OpenAIChatTarget()
