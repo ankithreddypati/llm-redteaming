@@ -39,8 +39,32 @@ ENV_FILE = Path(__file__).resolve().parent / ".env"
 if ENV_FILE.exists():
     load_dotenv(ENV_FILE)
 
-if os.getenv("OPENAI_API_KEY") and not os.getenv("OPENAI_CHAT_KEY"):
-    os.environ["OPENAI_CHAT_KEY"] = os.environ["OPENAI_API_KEY"]
+def _clean_secret(name: str) -> str:
+    value = os.getenv(name, "")
+    # Handle common CI copy/paste mistakes: quotes, whitespace, trailing newlines.
+    return value.strip().strip("\"").strip("'")
+
+
+openai_api_key = _clean_secret("OPENAI_API_KEY")
+openai_chat_key = _clean_secret("OPENAI_CHAT_KEY")
+
+if openai_api_key and not openai_chat_key:
+    openai_chat_key = openai_api_key
+
+if openai_chat_key:
+    os.environ["OPENAI_CHAT_KEY"] = openai_chat_key
+if openai_api_key:
+    os.environ["OPENAI_API_KEY"] = openai_api_key
+
+if not os.getenv("OPENAI_CHAT_KEY"):
+    raise RuntimeError(
+        "Missing OpenAI key. Set OPENAI_API_KEY (or OPENAI_CHAT_KEY) in environment/secrets."
+    )
+if os.getenv("OPENAI_CHAT_KEY") in {"***", "****", "xxxxx", "your-key-here"}:
+    raise RuntimeError(
+        "OPENAI_CHAT_KEY looks like a placeholder (e.g. '***'). Set the real key in GitHub Secrets."
+    )
+
 os.environ.setdefault("OPENAI_CHAT_ENDPOINT", "https://api.openai.com/v1")
 os.environ.setdefault("OPENAI_CHAT_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o"))
 
