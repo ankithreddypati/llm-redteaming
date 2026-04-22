@@ -1,0 +1,57 @@
+name: PyRIT Red Team
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  run-pyrit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-4o
+      EXPENSE_API_URL: http://127.0.0.1:8000
+      REDTEAM_MAX_TURNS: "8"
+      LANGSMITH_TRACING_V2: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Start FastAPI app
+        run: |
+          nohup uv run uvicorn main:app --host 127.0.0.1 --port 8000 > uvicorn.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
+              echo "API is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API failed to start"
+          cat uvicorn.log
+          exit 1
+
+      - name: Run PyRIT test
+        run: uv run python pyrit_test.py
+
+      - name: Upload app logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uvicorn-log
+          path: uvicorn.log
