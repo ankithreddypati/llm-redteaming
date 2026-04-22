@@ -23,6 +23,8 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
+        with:
+          prune-cache: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -47,7 +49,7 @@ jobs:
           exit 1
 
       - name: Run PyRIT test
-        run: uv run python pyrit_test.py
+        run: uv run python pyrit_test.py | tee pyrit-report.txt
 
       - name: Upload app logs
         if: always()
@@ -55,3 +57,10 @@ jobs:
         with:
           name: uvicorn-log
           path: uvicorn.log
+
+      - name: Upload PyRIT report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyrit-report
+          path: pyrit-report.txt
