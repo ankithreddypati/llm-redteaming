@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
+    paths:
+      - "pyrit_test.py"
+      - "main.py"
+      - ".github/workflows/pyrit-redteam.yml"
 
 jobs:
   run-pyrit:

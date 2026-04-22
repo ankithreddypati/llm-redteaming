@@ -31,5 +31,5 @@ For **PyRIT**: if you only set `OPENAI_API_KEY`, `pyrit_test.py` copies it to wh
 
 GitHub Actions runs `.github/workflows/pyrit-redteam.yml`; view the PyRIT report directly in the job logs, and download `uvicorn-log` from run artifacts if startup/runtime fails.
 
-
+## Notes: This is a very simple agent to do redteaming with PyRIT. It is not a production ready agent.
 
