@@ -1,16 +1,24 @@
 import os
+from typing import Annotated
+from fastapi import FastAPI, HTTPException
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
+from langchain_core.messages import AnyMessage
 from langchain_community.document_loaders import PyPDFLoader
-from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
+from pydantic import BaseModel
 from dotenv import load_dotenv
+from typing_extensions import TypedDict
 
 load_dotenv()
 
 # 0. State schema
-class AgentState(MessagesState):
-    pass
+class AgentState(TypedDict):
+    # Conversation history used by LangGraph. `add_messages` handles appending
+    # new AI/tool/user messages across node transitions.
+    messages: Annotated[list[AnyMessage], add_messages]
 
 # 1. Tools
 @tool
@@ -77,19 +85,36 @@ builder.add_edge("tools", "agent")
 
 graph = builder.compile()
 
-if __name__ == "__main__":
-    print(" Welcome to Expense Approver ")
-    print("Type 'quit' to exit.\n")
-    
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() in ['quit', 'exit']:
-            break
-            
-        inputs = {"messages": [("user", user_input)]}
-        
-        for chunk in graph.stream(inputs, stream_mode="values"):
-            last_msg = chunk["messages"][-1]
-            # Only print the text responses from the AI (ignore raw tool call data)
-            if last_msg.type == "ai" and last_msg.content:
-                print(f"CorpFlow: {last_msg.content}")
+app = FastAPI(title="Expense Approver API", version="1.0.0")
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+class ChatResponse(BaseModel):
+    response: str
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    inputs = {"messages": [("user", request.message)]}
+    last_ai_content = ""
+
+    for chunk in graph.stream(inputs, stream_mode="values"):
+        last_msg = chunk["messages"][-1]
+        if last_msg.type == "ai" and last_msg.content:
+            last_ai_content = str(last_msg.content)
+
+    if not last_ai_content:
+        raise HTTPException(status_code=500, detail="No AI response generated.")
+
+    return ChatResponse(response=last_ai_content)
