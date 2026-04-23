@@ -84,6 +84,7 @@ builder.add_edge("tools", "agent")
 
 graph = builder.compile()
 
+# simple fastapi wrapper around to make it as HTTP target for PyRIT
 app = FastAPI(title="Expense Approver API", version="1.0.0")
 
 
@@ -112,8 +113,6 @@ def chat(request: ChatRequest) -> ChatResponse:
         last_msg = chunk["messages"][-1]
         if last_msg.type == "ai" and last_msg.content:
             last_ai_content = str(last_msg.content)
-
     if not last_ai_content:
         raise HTTPException(status_code=500, detail="No AI response generated.")
-
     return ChatResponse(response=last_ai_content)
