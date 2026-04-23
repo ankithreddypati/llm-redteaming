@@ -17,7 +17,6 @@ load_dotenv()
 # 0. State schema
 class AgentState(TypedDict):
     # Conversation history used by LangGraph. `add_messages` handles appending
-    # new AI/tool/user messages across node transitions.
     messages: Annotated[list[AnyMessage], add_messages]
 
 # 1. Tools
